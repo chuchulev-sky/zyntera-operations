@@ -4,7 +4,7 @@ import type { CommitmentProject } from "@/lib/commitments/types";
 export type MoneyByCurrency = Map<string, number>;
 
 function addMoney(map: MoneyByCurrency, currency: string, amount: number) {
-  if (!amount) return;
+  if (typeof amount !== "number" || !Number.isFinite(amount) || amount === 0) return;
   map.set(currency, (map.get(currency) ?? 0) + amount);
 }
 
@@ -22,13 +22,21 @@ export function formatMoneySummary(map: MoneyByCurrency): string {
     .join(" • ");
 }
 
+/**
+ * Sums suggested prices for non-archived offers still in the sales pipeline.
+ * Excludes `Accepted` so totals are not double-counted with commitment `priceTotal`.
+ */
 export function calculateRevenueFromOffers(offers: Offer[]) {
-  const active = offers.filter((o) => !o.isArchived);
+  const active = offers.filter((o) => !o.isArchived && o.status !== "Accepted");
   const estimated = new Map<string, number>();
   for (const o of active) addMoney(estimated, o.currency || "EUR", o.suggestedPrice || 0);
   return { estimated };
 }
 
+/**
+ * `outstanding` = accounts receivable on billed work: max(0, invoiced − paid) per project,
+ * not remaining contract value (use priceTotal − paid if you need that separately).
+ */
 export function calculateRevenueFromCommitments(projects: CommitmentProject[]) {
   const active = projects.filter((p) => !p.isArchived);
   const confirmed = new Map<string, number>();
