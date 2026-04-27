@@ -5,7 +5,7 @@ import { monthKey as currentMonthKey, latestPaymentStatus } from "@/lib/marketin
 export type MoneyByCurrency = Map<string, number>;
 
 export function addMoney(map: MoneyByCurrency, currency: string, amount: number) {
-  if (!amount) return;
+  if (typeof amount !== "number" || !Number.isFinite(amount) || amount === 0) return;
   map.set(currency, (map.get(currency) ?? 0) + amount);
 }
 
@@ -27,6 +27,7 @@ export function formatMoneySummary(map: MoneyByCurrency): string {
     .join(" • ");
 }
 
+/** `proposal` sums proposal amounts only for Lead + Proposal Sent (open proposal stage). */
 export function calculateWebsitesSummary(projects: Project[]) {
   const active = projects.filter((p) => !p.isArchived);
   const proposal = new Map<string, number>();
@@ -44,9 +45,11 @@ export function calculateWebsitesSummary(projects: Project[]) {
     "Completed",
   ]);
 
+  const proposalPipelineStatuses = new Set<Project["status"]>(["Lead", "Proposal Sent"]);
+
   for (const p of active) {
     const cur = p.currency || "EUR";
-    addMoney(proposal, cur, p.proposalAmount || 0);
+    if (proposalPipelineStatuses.has(p.status)) addMoney(proposal, cur, p.proposalAmount || 0);
     addMoney(invoiced, cur, p.invoicedAmount || 0);
     addMoney(paid, cur, p.paidAmount || 0);
     if (soldStatuses.has(p.status)) addMoney(won, cur, p.agreedAmount || 0);
@@ -88,7 +91,18 @@ export function calculateRevenueSummary(projects: Project[], marketingClients: M
   };
 }
 
-export function revenueByOwner(projects: Project[]) {
+export type RevenueByOwnerRow = {
+  owner: string;
+  currency: string;
+  won: number;
+  paid: number;
+};
+
+/**
+ * Aggregates won (agreed) and paid amounts per owner **and** project currency.
+ * Use `formatMoneySummary` per currency group for display — do not assume EUR-only totals.
+ */
+export function revenueByOwner(projects: Project[]): { rows: RevenueByOwnerRow[] } {
   const active = projects.filter((p) => !p.isArchived);
   const soldStatuses = new Set([
     "Won",
@@ -99,15 +113,18 @@ export function revenueByOwner(projects: Project[]) {
     "Completed",
   ]);
 
-  const wonByOwner = new Map<string, number>();
-  const paidByOwner = new Map<string, number>();
+  const acc = new Map<string, RevenueByOwnerRow>();
 
   for (const p of active) {
     const owner = p.sourceOwner || "Team";
-    if (soldStatuses.has(p.status)) wonByOwner.set(owner, (wonByOwner.get(owner) ?? 0) + (p.agreedAmount || 0));
-    paidByOwner.set(owner, (paidByOwner.get(owner) ?? 0) + (p.paidAmount || 0));
+    const currency = p.currency || "EUR";
+    const key = `${owner}\0${currency}`;
+    const row = acc.get(key) ?? { owner, currency, won: 0, paid: 0 };
+    if (soldStatuses.has(p.status)) row.won += p.agreedAmount || 0;
+    row.paid += p.paidAmount || 0;
+    acc.set(key, row);
   }
 
-  return { wonByOwner, paidByOwner, currency: "EUR" as const };
+  return { rows: Array.from(acc.values()).sort((a, b) => a.owner.localeCompare(b.owner) || a.currency.localeCompare(b.currency)) };
 }
 
