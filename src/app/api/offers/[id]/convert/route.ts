@@ -10,6 +10,20 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
   if (e1) return NextResponse.json({ error: e1.message }, { status: 500 });
   const offer = offerFromRow(offerRow as DbOfferRow);
 
+  const { data: existing, error: eExisting } = await supabase
+    .from("commitment_projects")
+    .select("*")
+    .eq("offer_id", id)
+    .limit(1)
+    .maybeSingle();
+  if (eExisting) return NextResponse.json({ error: eExisting.message }, { status: 500 });
+  if (existing) {
+    return NextResponse.json(
+      { project: commitmentProjectFromRow(existing as DbCommitmentProjectRow), alreadyConverted: true },
+      { status: 200 }
+    );
+  }
+
   // Create commitment project snapshot from offer.
   const insert = {
     offer_id: offer.id,
