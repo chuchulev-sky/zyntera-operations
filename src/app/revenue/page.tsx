@@ -42,17 +42,18 @@ export default function RevenuePage() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Revenue</h1>
           <p className="text-sm text-zinc-500">
-            Derived visibility across offers (estimated) and commitments (confirmed/paid/outstanding).
+            Estimated offer value counts Draft + Sent only (Accepted is reflected in commitments). Outstanding is
+            invoiced minus paid (AR on billed work).
           </p>
         </div>
         <Badge variant="secondary">Early</Badge>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-        <ValueCard title="Estimated (offers)" value={estimated} />
+        <ValueCard title="Estimated (Draft + Sent)" value={estimated} />
         <ValueCard title="Confirmed (projects)" value={confirmed} accent />
         <ValueCard title="Paid" value={paid} />
-        <ValueCard title="Outstanding Revenue" value={outstanding} />
+        <ValueCard title="Outstanding (invoiced − paid)" value={outstanding} />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-3">
