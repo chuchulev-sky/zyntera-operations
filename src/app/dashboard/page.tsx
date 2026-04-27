@@ -62,13 +62,16 @@ function DashboardContent() {
   const paidRevenue = formatMoneySummary(projRev.paid);
   const outstandingRevenue = formatMoneySummary(projRev.outstanding);
 
+  // Same weekly model as Estimator: distribute each project's committed hours across its
+  // schedule weeks, then read the current week — not lifetime hours vs one week of capacity.
   const usedByDept = React.useMemo(() => {
-    const out: Record<Department, number> = { Development: 0, Marketing: 0, Design: 0 };
-    for (const p of activeProjects) {
-      const dept: Department = p.category === "Marketing" ? "Marketing" : p.category === "Design" ? "Design" : "Development";
-      out[dept] += Number(p.committedHours || 0);
-    }
-    return out;
+    const tl = buildCapacityTimeline({ projects: activeProjects, weeks: 1 });
+    const used = tl[0]?.usedByDept ?? { Development: 0, Marketing: 0, Design: 0 };
+    return {
+      Development: Math.round(used.Development || 0),
+      Marketing: Math.round(used.Marketing || 0),
+      Design: Math.round(used.Design || 0),
+    } satisfies Record<Department, number>;
   }, [activeProjects]);
 
   const freeByDept = React.useMemo(() => {
@@ -130,9 +133,13 @@ function DashboardContent() {
         <Card className="lg:col-span-1">
           <CardHeader>
             <CardTitle className="text-base">Revenue Overview</CardTitle>
+            <p className="text-xs text-zinc-500">
+              Estimated offers = Draft + Sent only. Outstanding = invoiced − paid (AR). Accepted offers count toward
+              commitments, not estimated offers.
+            </p>
           </CardHeader>
           <CardContent className="grid gap-4 sm:grid-cols-2">
-            <ValueCard title="Estimated (offers)" value={estimatedRevenue} />
+            <ValueCard title="Estimated (Draft + Sent)" value={estimatedRevenue} />
             <ValueCard title="Confirmed (projects)" value={confirmedRevenue} accent />
             <ValueCard title="Paid" value={paidRevenue} />
             <ValueCard title="Outstanding" value={outstandingRevenue} />
@@ -184,7 +191,10 @@ function DashboardContent() {
               );
             })}
             <Separator />
-            <div className="text-xs text-zinc-500">Capacity is computed from committed hours in active projects.</div>
+            <div className="text-xs text-zinc-500">
+              Capacity uses this week only: each project&apos;s committed hours are spread evenly across its start→target
+              weeks (same logic as the Estimator).
+            </div>
           </CardContent>
         </Card>
       </div>

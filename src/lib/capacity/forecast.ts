@@ -75,12 +75,15 @@ export function projectWeeks(project: CommitmentProject): Date[] {
   const end = safeDate(project.targetEndDate) ?? addDays(start, 13); // default ~2 weeks
 
   const startW = startOfWeekMonday(start);
-  const endW = startOfWeekMonday(end);
+  let endW = startOfWeekMonday(end);
+  if (endW.getTime() < startW.getTime()) {
+    endW = new Date(startW);
+  }
   const out: Date[] = [];
   for (let w = new Date(startW); w.getTime() <= endW.getTime(); w = addWeeks(w, 1)) {
     out.push(new Date(w));
   }
-  return out.length ? out : [startOfWeekMonday(new Date())];
+  return out.length ? out : [new Date(startW)];
 }
 
 export function distributeCommittedHoursEvenlyByWeek(project: CommitmentProject): Map<WeekKey, number> {
