@@ -106,12 +106,15 @@ export function calculateEstimatedHours(input: EstimatorInput) {
   if (input.category === "Design") {
     // UI/UX sizing (grounded ranges)
     // We derive size from websiteType as a simple proxy to avoid another input field.
+    const wt = input.website?.websiteType;
     const size =
-      input.website?.websiteType === "Landing Page"
+      wt === "Landing Page"
         ? "Small"
-        : input.website?.websiteType === "Corporate Website"
+        : wt === "Corporate Website"
           ? "Medium"
-          : "Large";
+          : wt === "E-commerce" || wt === "Custom Web App"
+            ? "Large"
+            : "Medium";
     const base = size === "Small" ? 15 : size === "Medium" ? 30 : 60; // 10–20 / 20–40 / 40–80
     hours += base;
     drivers.push(`Design size: ${size}`);
@@ -193,7 +196,11 @@ export function calculateTimelineDays(estimatedHours: number, urgency: Estimator
   return days;
 }
 
-export function calculatePricing(estimatedHours: number, category: EstimatorCategory, complexity: EstimatorComplexity) {
+export function calculatePricing(
+  estimatedHours: number,
+  _category: EstimatorCategory,
+  _complexity: EstimatorComplexity
+) {
   // Keep it grounded: no category inflation; complexity affects risk not rate.
   const minimumPrice = Math.round(estimatedHours * INTERNAL_BASE_RATE_EUR);
   const recommendedPrice = Math.round(estimatedHours * TARGET_RATE_EUR * TARGET_MULTIPLIER);
