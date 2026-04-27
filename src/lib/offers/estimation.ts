@@ -1,5 +1,5 @@
 import type { ServiceCategory } from "@/lib/services/catalog";
-import { estimateMarketingRetainer } from "@/lib/marketing/estimates";
+import { estimateMarketingRetainer, isMarketingService } from "@/lib/marketing/estimates";
 
 export type OfferCategory = "Website" | "Marketing" | "Design";
 export type OfferComplexity = "Low" | "Medium" | "High" | "Preliminary" | "Custom";
@@ -87,9 +87,12 @@ export function estimateOffer(input: {
 
   // Marketing retainers: estimate monthly hours/fee and map to Marketing dept.
   // Even for mixed offers, this gives reasonable results for marketing services.
-  const marketingNames = input.selectedServices.filter((s) => s.category === "Marketing").map((s) => s.name);
-  const marketingRetainer = marketingNames.length
-    ? estimateMarketingRetainer(marketingNames as any, input.creativesPerMonth ?? 0)
+  const marketingForRetainer = input.selectedServices
+    .filter((s) => s.category === "Marketing")
+    .map((s) => s.name)
+    .filter(isMarketingService);
+  const marketingRetainer = marketingForRetainer.length
+    ? estimateMarketingRetainer(marketingForRetainer, input.creativesPerMonth ?? 0)
     : { hoursPerMonth: 0, monthlyFeeEUR: 0 };
 
   const perServiceEntries: Array<{ department: Department; hours: number }> = [];
@@ -117,11 +120,13 @@ export function estimateOffer(input: {
   const assumedHoursPerWeek = 30;
   const estimatedTimelineDays = Math.max(3, Math.round((estimatedHoursTotal / assumedHoursPerWeek) * 7));
 
-  // Price: prefer marketing retainer suggested fee if marketing-only.
-  const basePrice =
-    input.category === "Marketing" && input.selectedServices.every((s) => s.category === "Marketing")
-      ? marketingRetainer.monthlyFeeEUR
-      : Math.round(estimatedHoursTotal * DEFAULT_HOURLY_RATE_EUR);
+  const hoursPrice = Math.round(estimatedHoursTotal * DEFAULT_HOURLY_RATE_EUR);
+  const marketingOnly =
+    input.category === "Marketing" && input.selectedServices.every((s) => s.category === "Marketing");
+  // Pure retainer: guideline monthly fee. Mixed bundles: hourly valuation + MRR guideline (not double-counted as marketing-only).
+  const basePrice = marketingOnly
+    ? marketingRetainer.monthlyFeeEUR
+    : hoursPrice + (marketingForRetainer.length ? marketingRetainer.monthlyFeeEUR : 0);
 
   return {
     estimatedHoursTotal,
