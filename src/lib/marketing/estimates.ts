@@ -21,6 +21,7 @@ export function estimateMarketingRetainer(services: MarketingService[], creative
   const base = services.reduce(
     (acc, s) => {
       const est = DEFAULTS[s];
+      if (!est) return acc;
       acc.hoursPerMonth += est.hoursPerMonth;
       acc.monthlyFeeEUR += est.monthlyFeeEUR;
       return acc;
