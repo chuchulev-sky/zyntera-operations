@@ -3,11 +3,24 @@ import type { CommitmentProject } from "@/lib/commitments/types";
 
 export type MoneyByCurrency = Map<string, number>;
 
+/**
+ * Adds a numeric amount into a currency-keyed map.
+ *
+ * @param map Target currency aggregation map.
+ * @param currency Currency code bucket.
+ * @param amount Numeric amount to add.
+ */
 function addMoney(map: MoneyByCurrency, currency: string, amount: number) {
   if (typeof amount !== "number" || !Number.isFinite(amount) || amount === 0) return;
   map.set(currency, (map.get(currency) ?? 0) + amount);
 }
 
+/**
+ * Formats a `MoneyByCurrency` map into a compact human-readable summary.
+ *
+ * @param map Aggregated money values grouped by currency.
+ * @returns Summary text such as `€1,200 • USD 500`, or `—` when empty.
+ */
 export function formatMoneySummary(map: MoneyByCurrency): string {
   if (map.size === 0) return "—";
   return Array.from(map.entries())
@@ -54,6 +67,12 @@ export function calculateRevenueFromCommitments(projects: CommitmentProject[]) {
   return { confirmed, paid, outstanding };
 }
 
+/**
+ * Aggregates confirmed commitment revenue by project category and currency.
+ *
+ * @param projects Commitment projects to aggregate.
+ * @returns Nested map: category -> currency -> amount.
+ */
 export function revenueSplitByCategory(projects: CommitmentProject[]) {
   const out = new Map<string, Map<string, number>>();
   for (const p of projects.filter((x) => !x.isArchived)) {

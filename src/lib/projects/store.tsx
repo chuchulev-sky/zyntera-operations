@@ -6,6 +6,9 @@ import { BUSINESS_STATUSES } from "@/lib/projects/types";
 import type { MarketingClient, MonthKey, MonthlyPaymentStatus } from "@/lib/marketing/types";
 import { monthKey } from "@/lib/marketing/helpers";
 
+/**
+ * Internal project store state backing the provider context.
+ */
 type ProjectStoreState = {
   projects: Project[];
   marketingClients: MarketingClient[];
@@ -13,6 +16,9 @@ type ProjectStoreState = {
   filters: ProjectFilters;
 };
 
+/**
+ * Public actions exposed by project store context.
+ */
 type ProjectStoreActions = {
   setFilters: (next: ProjectFilters) => void;
   selectProject: (projectId: string | null) => void;
@@ -42,8 +48,15 @@ type ProjectStoreActions = {
   refetchAll: () => Promise<void>;
 };
 
+/** Combined project store API type. */
 type ProjectStore = ProjectStoreState & ProjectStoreActions;
 
+/**
+ * Normalizes legacy marketing clients to current owner enum values.
+ *
+ * @param clients Raw clients from API/store.
+ * @returns Migrated marketing client list.
+ */
 function migrateMarketingClients(clients: MarketingClient[]): MarketingClient[] {
   return clients.map((c) => {
     const anyC = c as unknown as Record<string, unknown>;
@@ -55,6 +68,14 @@ function migrateMarketingClients(clients: MarketingClient[]): MarketingClient[] 
   });
 }
 
+/**
+ * Migrates legacy project shapes to current domain model assumptions.
+ *
+ * Handles historical category/type/owner/payment fields with safe defaults.
+ *
+ * @param projects Raw project list.
+ * @returns Migrated project list compatible with current UI.
+ */
 function migrateProjects(projects: Project[]): Project[] {
   return projects.map((p) => {
     const anyP = p as unknown as Record<string, unknown>;
@@ -124,6 +145,14 @@ function migrateProjects(projects: Project[]): Project[] {
   });
 }
 
+/**
+ * Ensures projects in each status lane have stable `sortIndex` values.
+ *
+ * Missing indexes are generated from ascending `startDate`.
+ *
+ * @param projects Project list to normalize.
+ * @returns New project list with guaranteed sort indexes per status.
+ */
 function ensureSortIndexes(projects: Project[]): Project[] {
   const next = projects.map((p) => ({ ...p }));
   for (const status of BUSINESS_STATUSES) {
@@ -142,6 +171,13 @@ function ensureSortIndexes(projects: Project[]): Project[] {
 
 const ProjectStoreContext = React.createContext<ProjectStore | null>(null);
 
+/**
+ * Provides project + marketing client state and actions to the application.
+ *
+ * @param props Provider props.
+ * @param props.children React subtree that consumes store context.
+ * @returns Context provider component.
+ */
 export function ProjectStoreProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = React.useState<ProjectStoreState>(() => {
     return {
@@ -152,6 +188,11 @@ export function ProjectStoreProvider({ children }: { children: React.ReactNode }
     };
   });
 
+  /**
+   * Refetches projects and marketing clients from API and refreshes local store state.
+   *
+   * @returns Promise resolved once state is updated.
+   */
   const refetchAll = React.useCallback(async () => {
     const [webRes, mktRes] = await Promise.all([
       fetch("/api/websites/projects", { cache: "no-store" }),
@@ -257,6 +298,12 @@ export function ProjectStoreProvider({ children }: { children: React.ReactNode }
   return <ProjectStoreContext.Provider value={api}>{children}</ProjectStoreContext.Provider>;
 }
 
+/**
+ * Consumes project store context.
+ *
+ * @returns Project store API.
+ * @throws Error when called outside `ProjectStoreProvider`.
+ */
 export function useProjectStore() {
   const ctx = React.useContext(ProjectStoreContext);
   if (!ctx) throw new Error("useProjectStore must be used within ProjectStoreProvider");

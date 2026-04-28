@@ -1,15 +1,33 @@
 import type { MarketingChecklist, Project, WebsiteChecklist } from "@/lib/projects/types";
 
+/**
+ * Converts a date object to ISO string.
+ *
+ * @param d Source date.
+ * @returns ISO timestamp string.
+ */
 function iso(d: Date): string {
   return d.toISOString();
 }
 
+/**
+ * Generates an ISO timestamp offset by N calendar days from now.
+ *
+ * @param days Relative day offset from current date.
+ * @returns ISO timestamp string.
+ */
 function daysFromNow(days: number): string {
   const d = new Date();
   d.setDate(d.getDate() + days);
   return iso(d);
 }
 
+/**
+ * Produces a complete website checklist using defaults plus optional overrides.
+ *
+ * @param partial Optional override values for checklist flags.
+ * @returns Fully-populated website checklist object.
+ */
 function baseWebsiteChecklist(partial: Partial<WebsiteChecklist>): WebsiteChecklist {
   return {
     proposalPrepared: false,
@@ -30,6 +48,12 @@ function baseWebsiteChecklist(partial: Partial<WebsiteChecklist>): WebsiteCheckl
   };
 }
 
+/**
+ * Produces a complete marketing checklist using defaults plus optional overrides.
+ *
+ * @param partial Optional override values for checklist flags.
+ * @returns Fully-populated marketing checklist object.
+ */
 function baseMarketingChecklist(partial: Partial<MarketingChecklist>): MarketingChecklist {
   return {
     proposalPrepared: false,
@@ -49,6 +73,9 @@ function baseMarketingChecklist(partial: Partial<MarketingChecklist>): Marketing
   };
 }
 
+/**
+ * Local seed dataset for project flows used by seed API/bootstrap scenarios.
+ */
 export const SEED_PROJECTS: Project[] = [
   {
     id: "p_1001",

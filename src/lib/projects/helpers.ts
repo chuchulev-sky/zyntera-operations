@@ -5,12 +5,20 @@ import type {
   WebsiteChecklist,
 } from "@/lib/projects/types";
 
+/**
+ * Checklist completion summary values.
+ *
+ * @property done Completed checklist items count.
+ * @property total Total checklist items count.
+ * @property percent Completion percentage in range 0..100.
+ */
 export type ChecklistCompletion = {
   done: number;
   total: number;
   percent: number; // 0..100
 };
 
+/** Ordered key sequence for website checklist rendering/progress. */
 export const WEBSITE_CHECKLIST_ORDER: (keyof WebsiteChecklist)[] = [
   "proposalPrepared",
   "proposalSent",
@@ -28,6 +36,7 @@ export const WEBSITE_CHECKLIST_ORDER: (keyof WebsiteChecklist)[] = [
   "deployed",
 ];
 
+/** Ordered key sequence for marketing checklist rendering/progress. */
 export const MARKETING_CHECKLIST_ORDER: (keyof MarketingChecklist)[] = [
   "proposalPrepared",
   "proposalSent",
@@ -44,6 +53,12 @@ export const MARKETING_CHECKLIST_ORDER: (keyof MarketingChecklist)[] = [
   "reporting",
 ];
 
+/**
+ * Computes checklist completion metrics for a project.
+ *
+ * @param project Project whose checklist should be evaluated.
+ * @returns Completion counts and percentage.
+ */
 export function checklistCompletion(project: Project): ChecklistCompletion {
   const order =
     project.category === "Website" ? WEBSITE_CHECKLIST_ORDER : MARKETING_CHECKLIST_ORDER;
@@ -54,17 +69,36 @@ export function checklistCompletion(project: Project): ChecklistCompletion {
   return { done, total, percent };
 }
 
+/**
+ * Parses an ISO date string with invalid-date fallback.
+ *
+ * @param input ISO string candidate.
+ * @returns Parsed `Date` or epoch date when invalid.
+ */
 export function parseIsoDate(input: string): Date {
   const d = new Date(input);
   return Number.isNaN(d.getTime()) ? new Date(0) : d;
 }
 
+/**
+ * Formats ISO date into short month/day representation.
+ *
+ * @param iso ISO date string.
+ * @returns Localized short label or `—` when invalid.
+ */
 export function formatShortDate(iso: string): string {
   const d = parseIsoDate(iso);
   if (d.getTime() === 0) return "—";
   return new Intl.DateTimeFormat(undefined, { month: "short", day: "2-digit" }).format(d);
 }
 
+/**
+ * Calculates number of days from `now` until a target date.
+ *
+ * @param iso Target ISO date string.
+ * @param now Reference date (defaults to current time).
+ * @returns Remaining days (rounded up) or `null` when target is invalid.
+ */
 export function daysUntil(iso: string, now = new Date()): number | null {
   const d = parseIsoDate(iso);
   if (d.getTime() === 0) return null;
@@ -72,6 +106,15 @@ export function daysUntil(iso: string, now = new Date()): number | null {
   return Math.ceil(ms / (1000 * 60 * 60 * 24));
 }
 
+/**
+ * Determines whether a project is overdue based on target end date.
+ *
+ * Completed/cancelled projects are never considered overdue.
+ *
+ * @param project Project entity to evaluate.
+ * @param now Reference time (defaults to current time).
+ * @returns `true` when the active project is past target end date.
+ */
 export function isOverdue(project: Project, now = new Date()): boolean {
   if (project.status === "Completed" || project.status === "Cancelled") return false;
   const end = parseIsoDate(project.targetEndDate);
@@ -79,10 +122,22 @@ export function isOverdue(project: Project, now = new Date()): boolean {
   return end.getTime() < now.getTime();
 }
 
+/**
+ * Determines whether a project is blocked by status or explicit blocked reason.
+ *
+ * @param project Project entity to evaluate.
+ * @returns `true` when blocked.
+ */
 export function isBlocked(project: Project): boolean {
   return project.status === "Blocked" || Boolean(project.blockedReason?.trim());
 }
 
+/**
+ * Derives a human-readable current stage label from checklist/status state.
+ *
+ * @param project Project entity to evaluate.
+ * @returns Best-effort stage label used in dashboards/boards.
+ */
 export function currentStageLabel(project: Project): string {
   const c = project.checklist as Record<string, boolean>;
 
@@ -132,8 +187,15 @@ export function currentStageLabel(project: Project): string {
   }
 }
 
+/** High-level flow buckets used by board/grouping views. */
 export type FlowBucket = "sold" | "scheduled" | "active" | "blocked" | "completed" | "other";
 
+/**
+ * Maps a business status to a coarse flow bucket.
+ *
+ * @param status Business pipeline status.
+ * @returns Flow bucket label.
+ */
 export function flowBucket(status: BusinessStatus): FlowBucket {
   if (status === "Scheduled") return "scheduled";
   if (status === "In Progress" || status === "Waiting for Client") return "active";

@@ -57,10 +57,22 @@ const SERVICE_DEFAULTS: Record<string, ServiceEstimation[]> = {
   "Email Marketing": [{ department: "Marketing", hours: 8 }],
 };
 
+/**
+ * Rounds a numeric value to one decimal precision.
+ *
+ * @param v Input value.
+ * @returns Rounded value with single decimal place.
+ */
 function round1(v: number) {
   return Math.round(v * 10) / 10;
 }
 
+/**
+ * Sums workload entries into per-department totals.
+ *
+ * @param entries Flat workload entries.
+ * @returns Department keyed workload totals.
+ */
 function sumWorkload(entries: Array<{ department: Department; hours: number }>): Record<Department, number> {
   return entries.reduce(
     (acc, e) => {
@@ -77,6 +89,16 @@ function sumWorkload(entries: Array<{ department: Department; hours: number }>):
   );
 }
 
+/**
+ * Estimates offer hours, timeline, and suggested pricing from selected services.
+ *
+ * @param input Estimation input.
+ * @param input.category Offer category.
+ * @param input.complexity Complexity multiplier tier.
+ * @param input.selectedServices Services selected for the offer.
+ * @param input.creativesPerMonth Optional creatives volume for marketing retainers.
+ * @returns Offer estimation result used by persistence and UI.
+ */
 export function estimateOffer(input: {
   category: OfferCategory;
   complexity: OfferComplexity;

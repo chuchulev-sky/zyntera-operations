@@ -4,11 +4,24 @@ import { monthKey as currentMonthKey, latestPaymentStatus } from "@/lib/marketin
 
 export type MoneyByCurrency = Map<string, number>;
 
+/**
+ * Adds a numeric amount into a currency-keyed map.
+ *
+ * @param map Target aggregation map.
+ * @param currency Currency code bucket.
+ * @param amount Numeric amount to add.
+ */
 export function addMoney(map: MoneyByCurrency, currency: string, amount: number) {
   if (typeof amount !== "number" || !Number.isFinite(amount) || amount === 0) return;
   map.set(currency, (map.get(currency) ?? 0) + amount);
 }
 
+/**
+ * Formats a `MoneyByCurrency` map into a compact readable string.
+ *
+ * @param map Aggregated money values grouped by currency.
+ * @returns Summary text such as `€1,200 • USD 500`, or `—` when empty.
+ */
 export function formatMoneySummary(map: MoneyByCurrency): string {
   if (map.size === 0) return "—";
   return Array.from(map.entries())
@@ -60,6 +73,13 @@ export function calculateWebsitesSummary(projects: Project[]) {
   return { proposal, won, invoiced, paid, outstanding };
 }
 
+/**
+ * Computes this month's marketing recurring totals.
+ *
+ * @param marketingClients Marketing client contracts.
+ * @param month Target month key (`YYYY-MM`) to evaluate payment status.
+ * @returns MRR, collected, and unpaid totals for the month.
+ */
 export function calculateMarketingThisMonth(marketingClients: MarketingClient[], month = currentMonthKey()) {
   const currency = "EUR";
   const active = marketingClients.filter((c) => c.status === "Active");
@@ -80,6 +100,14 @@ export function calculateMarketingThisMonth(marketingClients: MarketingClient[],
   return { month, mrr, collected, unpaid };
 }
 
+/**
+ * Builds a combined revenue summary for website projects and marketing retainers.
+ *
+ * @param projects Website pipeline projects.
+ * @param marketingClients Marketing retainer clients.
+ * @param month Target month key (`YYYY-MM`) for marketing calculations.
+ * @returns Aggregated revenue summary object for dashboards.
+ */
 export function calculateRevenueSummary(projects: Project[], marketingClients: MarketingClient[], month = currentMonthKey()) {
   const websites = calculateWebsitesSummary(projects);
   const marketing = calculateMarketingThisMonth(marketingClients, month);
@@ -101,6 +129,9 @@ export type RevenueByOwnerRow = {
 /**
  * Aggregates won (agreed) and paid amounts per owner **and** project currency.
  * Use `formatMoneySummary` per currency group for display — do not assume EUR-only totals.
+ *
+ * @param projects Website pipeline projects.
+ * @returns Owner/currency grouped revenue rows.
  */
 export function revenueByOwner(projects: Project[]): { rows: RevenueByOwnerRow[] } {
   const active = projects.filter((p) => !p.isArchived);
