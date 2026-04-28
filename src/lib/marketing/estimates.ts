@@ -13,10 +13,23 @@ const DEFAULTS: Record<MarketingService, MarketingServiceEstimate> = {
   "Email Marketing": { hoursPerMonth: 8, monthlyFeeEUR: 450 },
 };
 
+/**
+ * Runtime type guard for marketing service names.
+ *
+ * @param v Unknown value to validate.
+ * @returns `true` when `v` is a supported `MarketingService`.
+ */
 export function isMarketingService(v: unknown): v is MarketingService {
   return typeof v === "string" && (MARKETING_SERVICES as readonly string[]).includes(v);
 }
 
+/**
+ * Estimates monthly retainer workload and guideline fee from selected services.
+ *
+ * @param services Selected marketing services.
+ * @param creativesPerMonth Optional creatives count used for production overhead.
+ * @returns Estimated monthly hours and gross guideline fee in EUR.
+ */
 export function estimateMarketingRetainer(services: MarketingService[], creativesPerMonth = 0) {
   const base = services.reduce(
     (acc, s) => {
