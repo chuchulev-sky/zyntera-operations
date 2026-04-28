@@ -9,7 +9,9 @@ import type {
 } from "@/lib/estimator/types";
 
 // Pricing model (real agency baseline vs target)
+/** Internal minimum sustainable hourly rate used for floor pricing. */
 export const INTERNAL_BASE_RATE_EUR = 18;
+/** Commercial target hourly rate used for recommended pricing. */
 export const TARGET_RATE_EUR = 35;
 const TARGET_MULTIPLIER = 1.1;
 
@@ -26,6 +28,12 @@ const URGENCY_MULT: Record<EstimatorUrgency, number> = {
   Urgent: 1.3,
 };
 
+/**
+ * Calculates estimated delivery hours plus explanatory factors.
+ *
+ * @param input Structured estimator input.
+ * @returns Estimated hours and diagnostic arrays (drivers/cost/risk factors).
+ */
 export function calculateEstimatedHours(input: EstimatorInput) {
   const drivers: string[] = [];
   const expensiveFactors: string[] = [];
@@ -190,12 +198,27 @@ export function calculateEstimatedHours(input: EstimatorInput) {
   };
 }
 
+/**
+ * Converts estimated hours into a rough calendar duration in days.
+ *
+ * @param estimatedHours Final estimated effort in hours.
+ * @param urgency Urgency level that controls assumed weekly throughput.
+ * @returns Approximate timeline duration in days.
+ */
 export function calculateTimelineDays(estimatedHours: number, urgency: EstimatorUrgency) {
   const throughputPerWeek = urgency === "Urgent" ? 42 : urgency === "Fast" ? 36 : 30;
   const days = Math.max(3, Math.round((estimatedHours / throughputPerWeek) * 7));
   return days;
 }
 
+/**
+ * Produces pricing ranges from estimated hours and configured rates.
+ *
+ * @param estimatedHours Final estimated effort in hours.
+ * @param _category Reserved for future category-specific pricing.
+ * @param _complexity Reserved for future complexity-specific pricing.
+ * @returns Pricing payload including internal floor, recommended price, and range.
+ */
 export function calculatePricing(
   estimatedHours: number,
   _category: EstimatorCategory,
@@ -214,6 +237,13 @@ export function calculatePricing(
   };
 }
 
+/**
+ * Scores risk using complexity, urgency, size, and category-specific signals.
+ *
+ * @param input Estimator input payload.
+ * @param estimatedHours Final estimated effort in hours.
+ * @returns Risk level and contributing risk factors.
+ */
 export function calculateRiskLevel(input: EstimatorInput, estimatedHours: number): { riskLevel: RiskLevel; riskFactors: string[] } {
   const factors: string[] = [];
   let score = 0;
@@ -260,6 +290,13 @@ export function calculateRiskLevel(input: EstimatorInput, estimatedHours: number
   return { riskLevel: "High", riskFactors: factors };
 }
 
+/**
+ * Classifies how strongly a scope would consume currently free capacity.
+ *
+ * @param estimatedHours Final estimated effort in hours.
+ * @param freeCapacityHours Currently available team capacity in hours.
+ * @returns Capacity impact level.
+ */
 export function calculateCapacityImpact(estimatedHours: number, freeCapacityHours: number): CapacityImpact {
   if (freeCapacityHours <= 0) return "High";
   const ratio = estimatedHours / freeCapacityHours;
@@ -268,6 +305,12 @@ export function calculateCapacityImpact(estimatedHours: number, freeCapacityHour
   return "High";
 }
 
+/**
+ * End-to-end estimator pipeline that composes all sub-calculations.
+ *
+ * @param input Estimator input plus currently free capacity.
+ * @returns Unified estimator result payload for UI and persistence.
+ */
 export function estimateAll(input: EstimatorInput & { freeCapacityHours: number }): EstimatorResult {
   const h = calculateEstimatedHours(input);
   const timeline = calculateTimelineDays(h.estimatedHours, input.urgency);
