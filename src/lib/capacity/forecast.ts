@@ -27,6 +27,12 @@ function isoDate(d: Date): string {
   return d.toISOString().slice(0, 10);
 }
 
+/**
+ * Normalizes a date to the Monday of its week (00:00 local time).
+ *
+ * @param date Source date.
+ * @returns New `Date` instance aligned to week start.
+ */
 export function startOfWeekMonday(date: Date): Date {
   const d = new Date(date);
   d.setHours(0, 0, 0, 0);
@@ -36,20 +42,46 @@ export function startOfWeekMonday(date: Date): Date {
   return d;
 }
 
+/**
+ * Returns a new date shifted by a day offset.
+ *
+ * @param date Source date.
+ * @param days Day delta (positive/negative).
+ * @returns Shifted date.
+ */
 export function addDays(date: Date, days: number): Date {
   const d = new Date(date);
   d.setDate(d.getDate() + days);
   return d;
 }
 
+/**
+ * Returns a new date shifted by a week offset.
+ *
+ * @param date Source date.
+ * @param weeks Week delta (positive/negative).
+ * @returns Shifted date.
+ */
 export function addWeeks(date: Date, weeks: number): Date {
   return addDays(date, weeks * 7);
 }
 
+/**
+ * Computes canonical week key (`YYYY-MM-DD`) for the date's Monday.
+ *
+ * @param date Source date.
+ * @returns Week key string.
+ */
 export function weekKey(date: Date): WeekKey {
   return isoDate(startOfWeekMonday(date));
 }
 
+/**
+ * Formats a week span label (`Mon–Sun`) for UI display.
+ *
+ * @param weekStart Monday date of the target week.
+ * @returns Localized week range text.
+ */
 export function formatWeekLabel(weekStart: Date): string {
   const end = addDays(weekStart, 6);
   try {
@@ -60,6 +92,12 @@ export function formatWeekLabel(weekStart: Date): string {
   }
 }
 
+/**
+ * Maps commitment category to operational department capacity bucket.
+ *
+ * @param category Commitment category.
+ * @returns Department key used in capacity calculations.
+ */
 export function departmentForCommitmentCategory(category: CommitmentProject["category"]): Department {
   return category === "Marketing" ? "Marketing" : category === "Design" ? "Design" : "Development";
 }
@@ -70,6 +108,12 @@ function safeDate(iso: string | null | undefined): Date | null {
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
+/**
+ * Lists all weekly buckets a project occupies, inclusive of start and end week.
+ *
+ * @param project Commitment project with planned schedule.
+ * @returns Ordered week start dates that contain project work.
+ */
 export function projectWeeks(project: CommitmentProject): Date[] {
   const start = safeDate(project.startDate) ?? startOfWeekMonday(new Date());
   const end = safeDate(project.targetEndDate) ?? addDays(start, 13); // default ~2 weeks
@@ -86,6 +130,12 @@ export function projectWeeks(project: CommitmentProject): Date[] {
   return out.length ? out : [new Date(startW)];
 }
 
+/**
+ * Distributes committed hours evenly across project schedule weeks.
+ *
+ * @param project Commitment project to distribute.
+ * @returns Map of `weekKey -> allocatedHours`.
+ */
 export function distributeCommittedHoursEvenlyByWeek(project: CommitmentProject): Map<WeekKey, number> {
   const hours = Math.max(0, Number(project.committedHours || 0));
   const weeks = projectWeeks(project);
@@ -95,6 +145,15 @@ export function distributeCommittedHoursEvenlyByWeek(project: CommitmentProject)
   return out;
 }
 
+/**
+ * Builds a weekly capacity/usage timeline for the provided projects.
+ *
+ * @param args Timeline input configuration.
+ * @param args.projects Projects to include.
+ * @param args.weeks Number of weeks to emit.
+ * @param args.from Optional start anchor (defaults to current week Monday).
+ * @returns Weekly usage rows with per-department and total totals.
+ */
 export function buildCapacityTimeline(args: {
   projects: CommitmentProject[];
   weeks: number;
@@ -152,6 +211,19 @@ export function buildCapacityTimeline(args: {
   return timeline;
 }
 
+/**
+ * Finds the earliest feasible start window to fit required work hours.
+ *
+ * Uses a greedy forward scan over weekly free capacity in a department.
+ *
+ * @param args Scheduling input.
+ * @param args.projects Existing scheduled projects.
+ * @param args.department Department capacity bucket.
+ * @param args.requiredHours Hours that must be placed.
+ * @param args.from Optional scheduling anchor date.
+ * @param args.maxWeeks Search horizon in weeks.
+ * @returns Schedule window metadata or `null` when no feasible slot exists.
+ */
 export function scheduleWork(args: {
   projects: CommitmentProject[];
   department: Department;
