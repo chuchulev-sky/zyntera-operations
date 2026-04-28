@@ -1,40 +1,20 @@
 "use client";
 
-import * as React from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  calculateRevenueFromCommitments,
-  calculateRevenueFromOffers,
-  formatMoneySummary,
-  revenueSplitByCategory,
-} from "@/lib/revenue/derived";
-import type { Offer } from "@/lib/offers/types";
-import type { CommitmentProject } from "@/lib/commitments/types";
+import { formatMoneySummary } from "@/lib/revenue/derived";
+import { useRevenueData } from "@/app/revenue/_hooks/use-revenue-data";
 
+/**
+ * Revenue analytics page for high-level commercial visibility.
+ *
+ * Renders pipeline estimates (offers), confirmed/paid/outstanding commitment totals,
+ * and a per-category revenue split.
+ *
+ * @returns Revenue dashboard page component.
+ */
 export default function RevenuePage() {
-  const [offers, setOffers] = React.useState<Offer[]>([]);
-  const [projects, setProjects] = React.useState<CommitmentProject[]>([]);
-
-  React.useEffect(() => {
-    void Promise.all([
-      fetch("/api/offers", { cache: "no-store" }).then((r) => r.json()),
-      fetch("/api/projects", { cache: "no-store" }).then((r) => r.json()),
-    ]).then(([o, p]) => {
-      setOffers(((o as any).offers ?? []) as Offer[]);
-      setProjects(((p as any).projects ?? []) as CommitmentProject[]);
-    });
-  }, []);
-
-  const offerRev = calculateRevenueFromOffers(offers);
-  const projRev = calculateRevenueFromCommitments(projects);
-
-  const estimated = formatMoneySummary(offerRev.estimated);
-  const confirmed = formatMoneySummary(projRev.confirmed);
-  const paid = formatMoneySummary(projRev.paid);
-  const outstanding = formatMoneySummary(projRev.outstanding);
-
-  const byCat = revenueSplitByCategory(projects);
+  const { estimated, confirmed, paid, outstanding, byCat } = useRevenueData();
 
   return (
     <div className="space-y-6">
@@ -79,6 +59,15 @@ export default function RevenuePage() {
   );
 }
 
+/**
+ * Reusable value card for top KPI metrics.
+ *
+ * @param props Component props.
+ * @param props.title KPI title text.
+ * @param props.value Formatted KPI value text.
+ * @param props.accent Optional visual emphasis style.
+ * @returns KPI card component.
+ */
 function ValueCard({
   title,
   value,
@@ -110,6 +99,14 @@ function ValueCard({
   );
 }
 
+/**
+ * Simple label/value row used inside stacked metric sections.
+ *
+ * @param props Component props.
+ * @param props.label Row label.
+ * @param props.value Row formatted value.
+ * @returns Row component for compact summaries.
+ */
 function Row({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-center justify-between text-sm">
@@ -119,11 +116,4 @@ function Row({ label, value }: { label: string; value: string }) {
   );
 }
 
-function formatEUR(value: number): string {
-  try {
-    return new Intl.NumberFormat(undefined, { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(value);
-  } catch {
-    return `EUR ${Math.round(value).toLocaleString()}`;
-  }
-}
 
